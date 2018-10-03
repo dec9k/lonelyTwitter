@@ -1,3 +1,12 @@
+/**
+*Lonely tweeter class runs the main application activity
+*
+*@author: vinay
+*@since 1.0
+*@see java.io
+*/
+
+
 package ca.ualberta.cs.lonelytwitter;
 
 import java.io.BufferedReader;
@@ -23,6 +32,10 @@ import android.widget.ListView;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+
+/**
+* lonelyTwitterAcitivity class, to provide the UI of the application
+*/
 
 public class LonelyTwitterActivity extends Activity {
 
@@ -87,6 +100,9 @@ public class LonelyTwitterActivity extends Activity {
 	}
 
 	@Override
+	/**
+	* start of the application
+	*/
 	protected void onStart() {
 		// TODO Auto-generated method stub
 		super.onStart();
@@ -144,7 +160,10 @@ public class LonelyTwitterActivity extends Activity {
 		}
 		//return tweets.toArray(new String[tweets.size()]);
 	}
-	
+	/**
+	*Save the list in a file
+	*@throws FileNotFoundException
+	*/
 	private void saveInFile(){//String text, Date date) {
 		try {
 
