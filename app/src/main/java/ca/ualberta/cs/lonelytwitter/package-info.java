@@ -1,7 +1,4 @@
 /**
- * Sample description for the lonely Twitter application
- * 
- *@author Vinay
+ * Test package documentation.
  */
-
 package ca.ualberta.cs.lonelytwitter;

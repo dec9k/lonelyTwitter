@@ -1,53 +1,61 @@
 package ca.ualberta.cs.lonelytwitter;
 
-import java.util.ArrayList;
 import java.util.Date;
 
+import io.searchbox.annotations.JestId;
+
 public abstract class Tweet implements Tweetable {
-
-    private Date date;
     private String message;
-    private ArrayList<CurrentMood> moods = new ArrayList<CurrentMood>();
+    private Date date;
 
-    private static final Integer MAX_CHARS = 140;
+    //Keeps ID of elastic search
+    @JestId
+    //Keep elastic search
+    private String id;
 
-    Tweet() {
+    public Tweet(String message){
+        this.message = message;
         this.date = new Date();
-        this.message = "I am default message";
     }
 
-    Tweet(String message){
-        this.date = new Date();
-        this.message = message; // Tweet myTweet = new Tweet('Blaerggh');
+    public Tweet(String message, Date date){
+        this.message = message;
+        this.date = date;
     }
 
-    public Date getDate(){return this.date;}
-
-    public String getMessage(){
-        return this.message + this.moods.get(0).getMood();
-    }
-
-    public ArrayList<CurrentMood> getMoods(){
-        return this.moods;
-    }
-
-    public void setMoods(ArrayList<CurrentMood> moods){
-        this.moods = moods;
-    }
-
-    public void setMessage(String message) throws TweetTooLongException{
-        if (message.length() <= this.MAX_CHARS) {
-            this.message = message;
-        } else {
-            //Throw an exception catch and handle it
-            throw new TweetTooLongException();
-        }
+    @Override
+    public String toString(){
+        return message;
     }
 
     public abstract Boolean isImportant();
 
-    public String toString(){
-        return date.toString() + " | " + this.message;
-        //return this.message + date;
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+
+    public void setMessage(String message) throws TweetTooLongException {
+        if (message.length() > 140){
+            //Do Something!
+            throw new TweetTooLongException();
+        }
+        this.message = message;
+    }
+
+    public void setDate(Date date) {
+        this.date = date;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public Date getDate() {
+        return date;
     }
 }

@@ -1,16 +1,6 @@
-/**
-*Lonely tweeter class runs the main application activity
-*
-*@author: vinay
-*@since 1.0
-*@see java.io
-*/
-
-
 package ca.ualberta.cs.lonelytwitter;
-//a comment
+
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -23,8 +13,11 @@ import java.util.Date;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -33,165 +26,135 @@ import android.widget.ListView;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
-/**
-* lonelyTwitterAcitivity class, to provide the UI of the application
-*/
-
 public class LonelyTwitterActivity extends Activity {
 
 	private static final String FILENAME = "file.sav";
 	private EditText bodyText;
 	private ListView oldTweetsList;
-
-	//Create list of tweets
-	ArrayList<Tweet> tweetList;
-	ArrayAdapter<Tweet> adapter;
+	private ArrayList<NormalTweet> tweetList = new ArrayList<NormalTweet>();
+	private ArrayAdapter<NormalTweet> adapter;
 
 
-	
-	/** Called when the activity is first created. */
+
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
 
-		//First function that gets triggered
-
 		bodyText = (EditText) findViewById(R.id.body);
 		Button saveButton = (Button) findViewById(R.id.save);
-		Button clearButton = (Button) findViewById(R.id.clear);
+		final Button clearButton = (Button) findViewById(R.id.clear);
 		oldTweetsList = (ListView) findViewById(R.id.oldTweetsList);
-
-		clearButton.setOnClickListener(new View.OnClickListener() {
-
-			public void onClick(View v) {
-				setResult(RESULT_OK);
-				//Clears all previous tweets up to now
-
-				tweetList.clear();
-
-				saveInFile();
-				adapter.notifyDataSetChanged();
-
-				//saveInFile(text, new Date(System.currentTimeMillis()));
-				// don't close everytime it's saved ==> finish();
-
-			}
-		});
 
 		saveButton.setOnClickListener(new View.OnClickListener() {
 
 			public void onClick(View v) {
 				setResult(RESULT_OK);
 				String text = bodyText.getText().toString();
-				//Tweet gets created here
-
-				Tweet tweet = new NormalTweet(text);
-				tweetList.add(tweet);
-
-				saveInFile();
+				NormalTweet newTweet = new NormalTweet(text);
+				tweetList.add(newTweet);
 				adapter.notifyDataSetChanged();
+				//saveInFile(); // TODO replace this with elastic search
+				//Initialed it's elastic task
+				ElasticsearchTweetController.AddTweetsTask addTweetsTask
+						= new ElasticsearchTweetController.AddTweetsTask();
+				//execute it => call elastic search and post the feed
+				addTweetsTask.execute(newTweet);
+			}
+		});
 
-				//saveInFile(text, new Date(System.currentTimeMillis()));
-				// don't close everytime it's saved ==> finish();
+		clearButton.setOnClickListener(new View.OnClickListener() {
 
+			public void onClick(View v) {
+				setResult(RESULT_OK);
+				String msg = bodyText.getText().toString();
+
+
+				String query = "{ \"query\": { \"term\" : { \"message\" : \""+msg+"\" } } }";
+
+				//tweetList.clear();
+
+				//deleteFile(FILENAME);  // TODO deprecate this button
+
+				ElasticsearchTweetController.GetTweetsTask getTweetsTask =
+						new ElasticsearchTweetController.GetTweetsTask();
+
+				//empty string because not searching for anything
+				getTweetsTask.execute(query);
+				//used the returned tweets list
+
+				try {
+					tweetList = getTweetsTask.get();
+				} catch(Exception e){
+					Log.e("Error", "Failed to get the tweets out of the async object");
+
+				}
+
+				//For some reason the notifyDataSetChanged will not work!!!!!!!!!
+				adapter.notifyDataSetChanged();
+//				oldTweetsList.setAdapter(adapter);
 			}
 		});
 	}
 
 	@Override
-	/**
-	* start of the application
-	*/
 	protected void onStart() {
 		// TODO Auto-generated method stub
 		super.onStart();
+		//loadFromFile(); // TODO replace this with elastic search
 
-		//Load all the save tweets to our
-		loadFromFile(); //Old function that reads from traditional way now changing to object oriented
-		adapter = new ArrayAdapter<Tweet>(this,
-				R.layout.list_item,tweetList);
+		ElasticsearchTweetController.GetTweetsTask getTweetsTask =
+				new ElasticsearchTweetController.GetTweetsTask();
+		//empty string because not searching for anything
+		getTweetsTask.execute("");
+		//use the returned tweets list
 
-		//Not list of strings but a list of Tweets now
-		//String[] tweets = loadFromFile();
-		//ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
-		//		R.layout.list_item, tweets);
+		try {
+			tweetList = getTweetsTask.get();
+		} catch(Exception e){
+			Log.e("Error", "Failed to get the tweets out of the async object");
+
+		}
+
+		adapter = new ArrayAdapter<NormalTweet>(this,
+				R.layout.list_item, tweetList);
 		oldTweetsList.setAdapter(adapter);
 	}
 
+/*
 	private void loadFromFile() {
-		ArrayList<String> tweets = new ArrayList<String>(); // create a list of strings
-
-		//ArrayList<CurrentMood> mymoods = new ArrayList<CurrentMood>();
-		//mymoods.add(new Mood1());
-		//mymoods.add(new Mood2());
-
-		//NormalTweet myTweet = new NormalTweet();
-		//myTweet.setMoods(mymoods);
-
-		//tweetList.add(myTweet);
 		try {
-			FileInputStream fis = openFileInput(FILENAME);  //looks in the file of data storing
-			BufferedReader in = new BufferedReader(new InputStreamReader(fis)); //read each line
-
-			Gson gson = new Gson(); //library to save objects
-			//returning the type of the NormalTweets
-			Type listType = new TypeToken<ArrayList<NormalTweet>>(){}.getType();
-
-			tweetList = gson.fromJson(in, listType);
-
-			/**
-			 * Old stuff no longer needed since it's converted to object oriented not string anymore
-			 * String line = in.readLine();
-			 while (line != null) { //reading the line in the loop; line by line and putting in array list
-				tweets.add(line);
-				line = in.readLine();
-
-
-			}*/
-
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			tweetList = new ArrayList<Tweet>(); //an array of tweets
-			//e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		//return tweets.toArray(new String[tweets.size()]);
-	}
-	/**
-	*Save the list in a file
-	*@throws FileNotFoundException
-	*/
-	private void saveInFile(){//String text, Date date) {
-		try {
-
-			//NormalTweet myTweet = new NormalTweet("");
-			//myTweet.setMessage("Yes");
-
-			FileOutputStream fos = openFileOutput(FILENAME,
-					Context.MODE_PRIVATE);//Context.MODE_APPEND);
-			//MODE_PRIVATE due to no longer dealing with strings
-			//fos.write(new String(date.toString() + " | " + text)
-			//		.getBytes());
-			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(fos));
-
+			FileInputStream fis = openFileInput(FILENAME);
+			BufferedReader in = new BufferedReader(new InputStreamReader(fis));
 			Gson gson = new Gson();
-			gson.toJson(tweetList, out);
-			out.flush(); //or else print garbage
-
-			//instead of creating string tweet make object w own properties
-			//directly get objects rather than strings
-			//gson -> dependcy
-
-			fos.close();
+			//Code taken from http://stackoverflow.com/questions/12384064/gson-convert-from-json-to-a-typed-arraylistt Sept.22,2016
+			Type listType = new TypeToken<ArrayList<NormalTweet>>(){}.getType();
+			tweetList = gson.fromJson(in, listType);
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			tweetList = new ArrayList<NormalTweet>();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			throw new RuntimeException();
 		}
 	}
+
+
+	private void saveInFile() {
+		try {
+
+			FileOutputStream fos = openFileOutput(FILENAME,0);
+			OutputStreamWriter writer = new OutputStreamWriter(fos);
+			Gson gson = new Gson();
+			gson.toJson(tweetList, writer);
+			writer.flush();
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			throw new RuntimeException();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			throw new RuntimeException();
+		}
+	}
+	*/
 }
